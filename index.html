@@ -302,16 +302,25 @@
       var caGain  = gainPct < 25 ? 0.70 : gainPct < 50 ? 0.50 : gainPct < 75 ? 0.30 : 0.15;
       var caGainMontant = Math.round(baseCa * caGain / 100) * 100;
 
-      var params = new URLSearchParams({
-        score_global: avg,
-        score_energie: eScore,
-        score_sport: sScore,
-        score_nutrition: nScore,
-        score_sommeil: slScore,
-        ca_actuel: baseCa,
-        ca_gain: caGainMontant
-      });
-      new Image().src = 'https://hooks.zapier.com/hooks/catch/27352776/4brhqzz/?' + params.toString();
+      var bar = function(v) {
+        var f = Math.round((v / 100) * 8);
+        return '\u2588'.repeat(f) + '\u2591'.repeat(8 - f) + ' ' + v + '%';
+      };
+      var msg = [
+        '\ud83c\udfaf Nouveau diagnostic Versalia',
+        '',
+        '\ud83d\udcca Scores',
+        '\u00c9nergie   ' + bar(eScore),
+        'Sport     ' + bar(sScore),
+        'Nutrition ' + bar(nScore),
+        'Sommeil   ' + bar(slScore),
+        '',
+        'Score global : ' + avg + '/100',
+        '',
+        '\ud83d\udcb0 CA actuel : ' + baseCa.toLocaleString('fr-FR') + '\u20ac/mois',
+        '\ud83d\udcc8 \u00c0 d\u00e9bloquer : +' + caGainMontant.toLocaleString('fr-FR') + '\u20ac/mois',
+      ].join('\n');
+      new Image().src = 'https://hooks.zapier.com/hooks/catch/27352776/4brhqzz/?' + new URLSearchParams({ message: msg }).toString();
 
       setTimeout(showResult, 2200);
     }
