@@ -59,6 +59,43 @@
   .btn-next.ready { opacity: 1; pointer-events: auto; }
   .btn-next.ready:hover { background: #0F6E56; }
 
+  /* ── Contact step ── */
+  .contact-step { display: none; }
+  .contact-inp {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    font-size: 14px;
+    font-family: inherit;
+    color: #111;
+    background: #fff;
+    border: 1.5px solid #e0e0da;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 10px;
+  }
+  .contact-inp:focus { border-color: #1D9E75; }
+  .contact-inp::placeholder { color: #aaa; }
+  .btn-submit {
+    width: 100%;
+    padding: 0.85rem;
+    background: #1D9E75;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    opacity: 0.35;
+    pointer-events: none;
+    transition: opacity 0.2s, background 0.2s;
+    font-family: inherit;
+    margin-top: 4px;
+  }
+  .btn-submit.ready { opacity: 1; pointer-events: auto; }
+  .btn-submit.ready:hover { background: #0F6E56; }
+  .contact-note { font-size: 11px; color: #bbb; text-align: center; margin-top: 0.75rem; line-height: 1.5; }
+
   .loading-block { text-align: center; padding: 2.5rem 0; display: none; }
   .loading-block.active { display: block; }
   .loading-text { font-size: 14px; color: #888; margin-top: 1rem; }
@@ -103,6 +140,7 @@
     <div class="progress-fill" id="prog" style="width:0%"></div>
   </div>
 
+  <!-- Questions 1-5 -->
   <div id="questions">
     <div class="step active" data-step="0">
       <div class="q-label">Question 1 / 5</div>
@@ -162,6 +200,18 @@
 
   <button class="btn-next" id="btnNext">Continuer →</button>
 
+  <!-- Contact step -->
+  <div class="contact-step" id="contact-step">
+    <div class="q-label">Vos coordonnées</div>
+    <div class="q-text">Où envoyer votre analyse personnalisée ?</div>
+    <input class="contact-inp" id="inp-prenom" type="text" placeholder="Prénom *" autocomplete="given-name">
+    <input class="contact-inp" id="inp-tel" type="tel" placeholder="Téléphone * (pour recevoir votre analyse)" autocomplete="tel">
+    <input class="contact-inp" id="inp-email" type="email" placeholder="Email (facultatif)" autocomplete="email">
+    <button class="btn-submit" id="btn-submit">Voir mes résultats →</button>
+    <div class="contact-note">* Champs obligatoires. Vos données sont confidentielles et ne seront jamais partagées ni revendues.</div>
+  </div>
+
+  <!-- Loading -->
   <div class="loading-block" id="loading">
     <div>
       <div class="loading-dot"></div>
@@ -171,6 +221,7 @@
     <div class="loading-text">Analyse de vos résultats en cours…</div>
   </div>
 
+  <!-- Results -->
   <div class="result" id="result">
     <div class="scores-grid">
       <div class="score-block">
@@ -248,40 +299,98 @@
       steps[currentStep].querySelectorAll('.opt').forEach(b => b.setAttribute('style', STYLE_DEFAULT));
       btnNext.classList.remove('ready');
     } else {
+      // All questions done — show contact form
       document.getElementById('questions').style.display = 'none';
       btnNext.style.display = 'none';
-      document.getElementById('loading').classList.add('active');
-      setTimeout(showResult, 2200);
+      document.getElementById('contact-step').style.display = 'block';
     }
+  });
+
+  // Contact form logic
+  var inpPrenom = document.getElementById('inp-prenom');
+  var inpTel    = document.getElementById('inp-tel');
+  var inpEmail  = document.getElementById('inp-email');
+  var btnSubmit = document.getElementById('btn-submit');
+
+  function checkContactReady() {
+    if (inpPrenom.value.trim() && inpTel.value.trim()) {
+      btnSubmit.classList.add('ready');
+    } else {
+      btnSubmit.classList.remove('ready');
+    }
+  }
+  inpPrenom.addEventListener('input', checkContactReady);
+  inpTel.addEventListener('input', checkContactReady);
+
+  btnSubmit.addEventListener('click', function () {
+    var prenom    = inpPrenom.value.trim();
+    var telephone = inpTel.value.trim();
+    var email     = inpEmail.value.trim();
+    if (!prenom || !telephone) return;
+
+    document.getElementById('contact-step').style.display = 'none';
+    document.getElementById('loading').classList.add('active');
+
+    // Pre-calculate scores to send with API call
+    var eScore  = Math.round((answers[0].val / 4) * 100);
+    var sScore  = Math.round((answers[1].val / 4) * 100);
+    var nScore  = Math.round((answers[2].val / 4) * 100);
+    var slScore = Math.round((answers[3].val / 4) * 100);
+    var avg     = Math.round((eScore + sScore + nScore + slScore) / 4);
+    var baseCa  = answers[4].ca || 2000;
+    var gainPct = (sScore + nScore + slScore) / 3;
+    var caGain  = gainPct < 25 ? 0.70 : gainPct < 50 ? 0.50 : gainPct < 75 ? 0.30 : 0.15;
+    var caGainMontant = Math.round(baseCa * caGain / 100) * 100;
+
+    // Fire-and-forget — never blocks result display
+    fetch('https://hooks.zapier.com/hooks/catch/27352776/4brhqzz/', {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prenom: prenom,
+        telephone: telephone,
+        email: email,
+        score_global: avg,
+        score_energie: eScore,
+        score_sport: sScore,
+        score_nutrition: nScore,
+        score_sommeil: slScore,
+        ca_actuel: baseCa,
+        ca_gain: caGainMontant
+      })
+    }).catch(function () {});
+
+    setTimeout(showResult, 2200);
   });
 
   function showResult() {
     document.getElementById('loading').classList.remove('active');
-    const eScore = Math.round((answers[0].val / 4) * 100);
-    const sScore = Math.round((answers[1].val / 4) * 100);
-    const nScore = Math.round((answers[2].val / 4) * 100);
-    const slScore = Math.round((answers[3].val / 4) * 100);
-    const avgScore = Math.round((eScore + sScore + nScore + slScore) / 4);
-    const baseCa = answers[4].ca || 2000;
-    const gain = (sScore + nScore + slScore) / 3;
-    const caGain = gain < 25 ? 0.70 : gain < 50 ? 0.50 : gain < 75 ? 0.30 : 0.15;
-    const caGainMontant = Math.round(baseCa * caGain / 100) * 100;
+    var eScore  = Math.round((answers[0].val / 4) * 100);
+    var sScore  = Math.round((answers[1].val / 4) * 100);
+    var nScore  = Math.round((answers[2].val / 4) * 100);
+    var slScore = Math.round((answers[3].val / 4) * 100);
+    var avgScore = Math.round((eScore + sScore + nScore + slScore) / 4);
+    var baseCa  = answers[4].ca || 2000;
+    var gain    = (sScore + nScore + slScore) / 3;
+    var caGain  = gain < 25 ? 0.70 : gain < 50 ? 0.50 : gain < 75 ? 0.30 : 0.15;
+    var caGainMontant = Math.round(baseCa * caGain / 100) * 100;
 
     document.getElementById('res-energie').textContent = avgScore;
     document.getElementById('res-ca').textContent = '+' + caGainMontant.toLocaleString('fr-FR') + '€';
 
-    setTimeout(() => {
+    setTimeout(function () {
       setGauge('g-energie', 'g-energie-val', eScore);
-      setGauge('g-sport', 'g-sport-val', sScore);
-      setGauge('g-nutri', 'g-nutri-val', nScore);
+      setGauge('g-sport',   'g-sport-val',   sScore);
+      setGauge('g-nutri',   'g-nutri-val',   nScore);
       setGauge('g-sommeil', 'g-sommeil-val', slScore);
     }, 100);
 
-    const conseils = buildConseils(sScore, nScore, slScore);
-    const cl = document.getElementById('conseils-list');
+    var conseils = buildConseils(sScore, nScore, slScore);
+    var cl = document.getElementById('conseils-list');
     cl.innerHTML = '';
-    conseils.forEach((c, i) => {
-      cl.innerHTML += `<div class="conseil"><div class="conseil-num">Conseil ${i + 1}</div><div class="conseil-text">${c}</div></div>`;
+    conseils.forEach(function (c, i) {
+      cl.innerHTML += '<div class="conseil"><div class="conseil-num">Conseil ' + (i + 1) + '</div><div class="conseil-text">' + c + '</div></div>';
     });
 
     document.getElementById('result').classList.add('active');
@@ -293,7 +402,7 @@
   }
 
   function buildConseils(sport, nutri, sommeil) {
-    const out = [];
+    var out = [];
     if (sport <= 50) {
       out.push("Introduisez 2 séances de 30 min de sport par semaine minimum. Une étude finlandaise sur des jumeaux a démontré que les individus actifs génèrent des revenus significativement plus élevés — l'exercice forge la discipline et la clarté mentale qui se transfèrent directement en performance business.");
     } else if (sport <= 75) {
