@@ -302,18 +302,17 @@
       var caGain  = gainPct < 25 ? 0.70 : gainPct < 50 ? 0.50 : gainPct < 75 ? 0.30 : 0.15;
       var caGainMontant = Math.round(baseCa * caGain / 100) * 100;
 
-      fetch('https://hooks.zapier.com/hooks/catch/27352776/4brhqzz/', {
-        method: 'POST',
-        mode: 'no-cors',
-        body: new URLSearchParams({
-          score_global: avg,
-          score_energie: eScore,
-          score_sport: sScore,
-          score_nutrition: nScore,
-          score_sommeil: slScore,
-          ca_actuel: baseCa,
-          ca_gain: caGainMontant
-        })
+      var params = new URLSearchParams({
+        score_global: avg,
+        score_energie: eScore,
+        score_sport: sScore,
+        score_nutrition: nScore,
+        score_sommeil: slScore,
+        ca_actuel: baseCa,
+        ca_gain: caGainMontant
+      });
+      fetch('https://hooks.zapier.com/hooks/catch/27352776/4brhqzz/?' + params.toString(), {
+        mode: 'no-cors'
       }).catch(function () {});
 
       setTimeout(showResult, 2200);
