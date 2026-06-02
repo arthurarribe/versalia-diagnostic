@@ -304,8 +304,8 @@
 
       fetch('https://hooks.zapier.com/hooks/catch/27352776/4brhqzz/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        mode: 'no-cors',
+        body: new URLSearchParams({
           score_global: avg,
           score_energie: eScore,
           score_sport: sScore,
