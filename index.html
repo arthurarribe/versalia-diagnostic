@@ -311,9 +311,7 @@
         ca_actuel: baseCa,
         ca_gain: caGainMontant
       });
-      fetch('https://hooks.zapier.com/hooks/catch/27352776/4brhqzz/?' + params.toString(), {
-        mode: 'no-cors'
-      }).catch(function () {});
+      new Image().src = 'https://hooks.zapier.com/hooks/catch/27352776/4brhqzz/?' + params.toString();
 
       setTimeout(showResult, 2200);
     }
